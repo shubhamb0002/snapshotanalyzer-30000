@@ -50,7 +50,7 @@ def snapshots():
 
 @snapshots.command('list')
 @click.option('--Project', default=None, help="Only instances for project (tag Project:<name>)")
-def list_volumes(project):
+def list_snapshots(project):
     "List Volumes Snapshots"
 
     instances = filter_instances(project)
@@ -127,7 +127,7 @@ def stop_instances(project):
             i.stop()
 
         except botocore.exceptions.ClientError as e:
-            print("Cloud not stop {0}".format(i.id) + str(e))
+            print("Cloud not stop {0} ".format(i.id) + str(e))
             continue
 
     return
@@ -146,7 +146,7 @@ def start_instances(project):
             i.start()
 
         except botocore.exceptions.ClientError as e:
-            print("Cloud not start {0}".format(i.id) + str(e))
+            print("Cloud not start {0} ".format(i.id) + str(e))
             continue
 
     return
