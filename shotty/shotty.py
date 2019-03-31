@@ -17,6 +17,10 @@ def filter_instances(project):
 
     return instances
 
+def snapshot_pending(volume):
+    snapshot = list(volume.snapshots.all())
+    return snapshot and snapshot[0].state == "pending"
+
 @click.group()
 def cli():
     "shotty manages snapshots"
@@ -50,7 +54,7 @@ def snapshots():
 
 @snapshots.command('list')
 @click.option('--Project', default=None, help="Only instances for project (tag Project:<name>)")
-@click.option('--all', 'list_all', default=False, is_flag=True, 
+@click.option('--all', 'list_all', default=False, is_flag=True,
 help="List all snapshots for the volumes, not just the recent one")
 def list_snapshots(project, list_all):
     "List Volumes Snapshots"
@@ -84,9 +88,14 @@ def create_snapshots(project):
 
     for i in instances.all():
         print("Stoping...{0}".format(i.id))
+
         i.stop()
         i.wait_until_stopped()
+
         for v in i.volumes.all():
+            if snapshot_pending(v):
+                print("Skipping the snapshot creation for .... {0}, creation already in progress!! ".format(v.id))
+                continue
             print("Creating snapshots of {0}".format(v.id))
             v.create_snapshot(Description="created by an snapshotAlyzer 30000")
 
