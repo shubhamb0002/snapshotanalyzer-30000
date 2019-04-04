@@ -31,20 +31,33 @@ def volumes():
 
 @volumes.command('list')
 @click.option('--Project', default=None, help="Only volumes for project (tag Project:<name>)")
-def list_volumes(project):
+@click.option('--instance_id', default=None, help="Only volumes associated with that instance id")
+def list_volumes(project, instance_id):
     "List EC2 Volumes"
 
     instances = filter_instances(project)
-
-    for i in instances:
-        for j in i.volumes.all():
+    instance_id = str(instance_id)
+    instance = ec2.Instance(instance_id)  #It will get the instance resources
+    if instance_id:
+        for j in instance.volumes.all():
                 print(', '.join((
                     j.id,
-                    i.id,
+                    instance.id,
                     j.state,
                     str(j.size) + "GiB",
                     j.encrypted and "Encrypted" or "Not Encrypted"
                 )))
+
+    else:
+        for i in instances:
+            for j in i.volumes.all():
+                    print(', '.join((
+                        j.id,
+                        i.id,
+                        j.state,
+                        str(j.size) + "GiB",
+                        j.encrypted and "Encrypted" or "Not Encrypted"
+                    )))
     return
 
 
@@ -56,23 +69,40 @@ def snapshots():
 @click.option('--Project', default=None, help="Only instances for project (tag Project:<name>)")
 @click.option('--all', 'list_all', default=False, is_flag=True,
 help="List all snapshots for the volumes, not just the recent one")
-def list_snapshots(project, list_all):
+@click.option('--instance_id', default=None, help="Only snapshots associated with that instance id")
+def list_snapshots(project, list_all, instance_id):
     "List Volumes Snapshots"
 
     instances = filter_instances(project)
+    instance_id = str(instance_id)
+    instance = ec2.Instance(instance_id)  #It will get the instance resources
 
-    for i in instances:
-        for j in i.volumes.all():
+    if instance_id:
+        for j in instance.volumes.all():
             for s in j.snapshots.all():
                 print(', '.join((
                     s.id,
                     j.id,
-                    i.id,
+                    instance.id,
                     s.state,
                     s.progress,
                     s.start_time.strftime("%c"),
                 )))
                 if s.state == "completed" and not list_all: break
+
+    else:
+        for i in instances:
+            for j in i.volumes.all():
+                    for s in j.snapshots.all():
+                        print(', '.join((
+                            s.id,
+                            j.id,
+                            i.id,
+                            s.state,
+                            s.progress,
+                            s.start_time.strftime("%c"),
+                        )))
+                        if s.state == "completed" and not list_all: break
     return
 
 @cli.group('instances')
