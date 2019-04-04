@@ -100,7 +100,13 @@ def create_snapshots(project, force):
                         print("Skipping the snapshot creation for .... {0}, creation already in progress!! ".format(v.id))
                         continue
                     print("Creating snapshots of {0}".format(v.id))
-                    v.create_snapshot(Description="created by an snapshotAlyzer 30000")
+
+                    try:
+                        v.create_snapshot(Description="created by an snapshotAlyzer 30000")
+
+                    except botocore.exceptions.ClientError as e:
+                        print("Could not reboot {0} ".format(i.id) + str(e))
+                        continue
 
                 print("Starting...{0}".format(i.id))
                 i.start()
