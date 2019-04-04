@@ -1,4 +1,4 @@
-# snapshotanalyzer-30000
+# Snapshot Manager v1.0
 
 Demo project to manage EC2 instances snapshots
 
