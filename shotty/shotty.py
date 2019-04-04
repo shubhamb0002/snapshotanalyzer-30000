@@ -1,6 +1,7 @@
 import boto3
 import click
 import botocore
+import datetime
 
 session = boto3.Session(profile_name='shotty')
 ec2 = session.resource('ec2')
@@ -36,9 +37,11 @@ def list_volumes(project, instance_id):
     "List EC2 Volumes"
 
     instances = filter_instances(project)
-    instance_id = str(instance_id)
-    instance = ec2.Instance(instance_id)  #It will get the instance resources
+
     if instance_id:
+
+        instance_id = str(instance_id)
+        instance = ec2.Instance(instance_id)  #It will get the instance resources
         for j in instance.volumes.all():
                 print(', '.join((
                     j.id,
@@ -74,10 +77,10 @@ def list_snapshots(project, list_all, instance_id):
     "List Volumes Snapshots"
 
     instances = filter_instances(project)
-    instance_id = str(instance_id)
-    instance = ec2.Instance(instance_id)  #It will get the instance resources
 
     if instance_id:
+        instance_id = str(instance_id)
+        instance = ec2.Instance(instance_id)  #It will get the instance resources
         for j in instance.volumes.all():
             for s in j.snapshots.all():
                 print(', '.join((
@@ -111,14 +114,14 @@ def instances():
 
 @instances.command('snapshots', help="Create snapshots of all volumes")
 @click.option('--Project', default=None, help="Only instances for project (tag Project:<name>)")
+@click.option('--age', default=None, help="Only snapshot those volumes whose last successful snapshot is older than that many age(days)")
 @click.option('--force', is_flag=True, help="Force Reboot the instances")
-def create_snapshots(project, force):
+def create_snapshots(project, age, force):
     "Create snapshots for EC2 instances"
 
     if project or force:
 
             instances = filter_instances(project)
-
             for i in instances.all():
                 print("checking the status")
                 status = i.state['Name']
@@ -136,16 +139,41 @@ def create_snapshots(project, force):
                     if snapshot_pending(v):
                         print("Skipping the snapshot creation for .... {0}, creation already in progress!! ".format(v.id))
                         continue
-                    print("Creating snapshots of {0}".format(v.id))
 
-                    try:
-                        v.create_snapshot(Description="created by an snapshotAlyzer 30000")
+                    if age:
+                        for s in v.snapshots.all():
+                            age = int(age)
+                            date_format = "%Y-%m-%d %H:%M:%S"
+                            start_time = str(s.start_time)
+                            start_time = start_time[:19]
+                            cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=age)
+                            start_time = datetime.datetime.strptime(start_time, date_format)
 
-                    except botocore.exceptions.ClientError as e:
-                        print("Could not created snapshot for {0} ".format(v.id) + str(e))
-                        continue
+                            if start_time < cutoff:
+                                    print("Creating snapshots of {0}".format(v.id))
 
-                print("checking the status")
+                                    try:
+                                        v.create_snapshot(Description="created by an snapshotAlyzer 30000")
+
+                                    except botocore.exceptions.ClientError as e:
+                                        print("Could not created snapshot for {0} ".format(v.id) + str(e))
+                                        continue
+
+                            else:
+                                    print("aborting the snapshot creation process for {0}".format(v.id))
+                                    print("Volume has snapshot created before the given age:{0}".format(age))
+                                    break
+                    else:
+                        print("Creating snapshots of {0}".format(v.id))
+                        try:
+                            v.create_snapshot(Description="created by an snapshotAlyzer 30000")
+
+                        except botocore.exceptions.ClientError as e:
+                            print("Could not created snapshot for {0} ".format(v.id) + str(e))
+                            continue
+
+
+                print("checking the status before creation of snapshot")
                 if status == 'running':
                     print("Starting...{0}".format(i.id))
                     i.start()
