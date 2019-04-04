@@ -90,10 +90,17 @@ def create_snapshots(project, force):
             instances = filter_instances(project)
 
             for i in instances.all():
+                print("checking the status")
+                status = i.state['Name']
                 print("Stoping...{0}".format(i.id))
 
-                i.stop()
-                i.wait_until_stopped()
+                try:
+                    i.stop()
+                    i.wait_until_stopped()
+
+                except botocore.exceptions.ClientError as e:
+                    print("Could not stop {0} ".format(i.id) + str(e))
+                    continue
 
                 for v in i.volumes.all():
                     if snapshot_pending(v):
@@ -105,13 +112,16 @@ def create_snapshots(project, force):
                         v.create_snapshot(Description="created by an snapshotAlyzer 30000")
 
                     except botocore.exceptions.ClientError as e:
-                        print("Could not reboot {0} ".format(i.id) + str(e))
+                        print("Could not created snapshot for {0} ".format(v.id) + str(e))
                         continue
 
-                print("Starting...{0}".format(i.id))
-                i.start()
-                i.wait_until_running()
-
+                print("checking the status")
+                if status == 'running':
+                    print("Starting...{0}".format(i.id))
+                    i.start()
+                    i.wait_until_running()
+                else:
+                    print("Instance state was {0}, Leaving it to previous state".format(i.state['Name']))
             print("Job is done!!")
     else:
         print("Please define --Project or --force tag in command")
