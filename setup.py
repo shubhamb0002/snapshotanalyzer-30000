@@ -10,12 +10,13 @@ setup(
     url='https://github.com/shubhamb0002/snapshotanalyzer-30000',
     install_requires=[
         'click',
-        'boto3'
+        'boto3',
+        'datetime'
         ],
     entry_points='''
         [console_scripts]
         shotty=shotty.shotty:cli
         ''',
-        
+
 
 )
